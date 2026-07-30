@@ -55,7 +55,8 @@ jobs:
       - name: Run type checks (mypy)
         run: |
           # Ignore missing imports for third-party packages to reduce noise
-          mypy --ignore-missing-imports .
+          # Exclude the build directory to avoid duplicate-module errors from installed/build artifacts
+          mypy --ignore-missing-imports --exclude '(^|/)build(/|$)' .
 
       - name: Run tests (pytest)
         run: |
