@@ -136,6 +136,13 @@ def find_not_following_back(
     return sorted(set(following) - set(followers))
 
 
+def find_following_back(
+    followers: Iterable[str],
+    following: Iterable[str],
+) -> list[str]:
+    return sorted(set(following) & set(followers))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Show Instagram accounts a user follows that do not follow back",
@@ -147,9 +154,15 @@ def main() -> int:
         help="Instagram sessionid cookie (or set INSTAGRAM_SESSIONID)",
     )
     parser.add_argument(
+<<<<<<< HEAD
         "--debug",
         action="store_true",
         help="Enable debug logging",
+=======
+        "--opposite",
+        action="store_true",
+        help="Show accounts the user follows that DO follow back, instead of ones that don't",
+>>>>>>> origin/main
     )
     args = parser.parse_args()
 
@@ -160,12 +173,18 @@ def main() -> int:
     session = _build_session(args.sessionid)
     followers, following = get_followers_and_following(args.username, args.sessionid, session=session)
 
+<<<<<<< HEAD
     # configure logging early so any errors are visible when --debug is passed
     logger = logging.getLogger(__name__)
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
 
     for user in find_not_following_back(followers, following):
+=======
+    finder = find_following_back if args.opposite else find_not_following_back
+
+    for user in finder(followers, following):
+>>>>>>> origin/main
         try:
             # fetch profile info once and filter out business/professional accounts
             count, is_business = _fetch_user_profile(session, user)

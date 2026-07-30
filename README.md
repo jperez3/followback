@@ -27,6 +27,12 @@ INSTAGRAM_SESSIONID=<sessionid> uv run python followback.py <your_instagram_user
 
 _Hint: In Chrome, go to instagram.com, login, press F12, Go to the Applications tab and copy the `sessionid` value_
 
+Pass `--opposite` to flip it around and see who you follow that *does* follow you back (still filters out business/pro accounts and accounts with 10k+ followers):
+
+```bash
+uv run python followback.py <instagram_username> --sessionid <sessionid> --opposite
+```
+
 
 
 
