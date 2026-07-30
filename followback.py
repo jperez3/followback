@@ -13,7 +13,6 @@ class RateLimitError(Exception):
     """Raised when the Instagram API returns a 429 Too Many Requests."""
 
 
-
 def _build_session(sessionid: str) -> requests.Session:
     session = requests.Session()
     session.headers.update(
