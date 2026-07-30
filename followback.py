@@ -89,7 +89,8 @@ def _fetch_friendship_usernames(
     next_max_id: str | None = None
 
     while True:
-        params = {"count": 200}
+        # `count` is an int but `max_id` (when present) is a str, so use a union-typed mapping
+        params: dict[str, int | str] = {"count": 200}
         if next_max_id:
             params["max_id"] = next_max_id
 
