@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+jobs:
+  lint-and-test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.14"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
+      - name: Show Python info
+        run: |
+          python --version
+          pip --version
+
+      - name: Install uv and use it to install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel uv
+          # Create a venv and install the package plus dev extras via uv's pip interface
+          # uv pip sync expects a requirements-style file; use uv to install package and dev extras in-place
+          # Install project and dev extras into the environment
+          uv pip sync --project . --extras dev || true
+          # If the above doesn't populate the environment in the runner, fall back to installing the extras directly
+          python -m pip install .[dev]
+
+      - name: Run linting and formatting checks (ruff)
+        run: |
+          ruff --version || true
+          # Check formatting and linting using ruff
+          ruff check .
+          # Optionally run ruff to ensure no fixes are needed
+          ruff check --select I --exit-zero . || true
+
+      - name: Run type checks (mypy)
+        run: |
+          # Ignore missing imports for third-party packages to reduce noise
+          # Exclude the build directory to avoid duplicate-module errors from installed/build artifacts
+          mypy --ignore-missing-imports --exclude '(^|/)build(/|$)' .
+
+      - name: Run tests (pytest)
+        run: |
+          pytest -q

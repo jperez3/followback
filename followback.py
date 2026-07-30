@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
-from typing import Iterable
+import sys
+from collections.abc import Iterable
 
 import requests
+
+
+class RateLimitError(Exception):
+    """Raised when the Instagram API returns a 429 Too Many Requests."""
 
 
 def _build_session(sessionid: str) -> requests.Session:
@@ -48,7 +54,13 @@ def _fetch_user_profile(session: requests.Session, username: str) -> tuple[int, 
         params={"username": username},
         timeout=30,
     )
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        # Convert 429 responses into a RateLimitError so callers can handle them specially
+        if response.status_code == 429:
+            raise RateLimitError("rate limit hit") from exc
+        raise
     user = response.json().get("data", {}).get("user")
     if not user:
         raise ValueError(f"Could not find user '{username}' when fetching profile")
@@ -76,7 +88,8 @@ def _fetch_friendship_usernames(
     next_max_id: str | None = None
 
     while True:
-        params = {"count": 200}
+        # `count` is an int but `max_id` (when present) is a str, so use a union-typed mapping
+        params: dict[str, int | str] = {"count": 200}
         if next_max_id:
             params["max_id"] = next_max_id
 
@@ -140,6 +153,11 @@ def main() -> int:
         help="Instagram sessionid cookie (or set INSTAGRAM_SESSIONID)",
     )
     parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
+    parser.add_argument(
         "--opposite",
         action="store_true",
         help="Show accounts the user follows that DO follow back, instead of ones that don't",
@@ -148,6 +166,11 @@ def main() -> int:
 
     if not args.sessionid:
         raise SystemExit("Missing sessionid. Pass --sessionid or set INSTAGRAM_SESSIONID.")
+
+    # configure logging early so any errors are visible when --debug is passed
+    logger = logging.getLogger(__name__)
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
 
     # build a single session and reuse it for per-user profile checks
     session = _build_session(args.sessionid)
@@ -159,8 +182,14 @@ def main() -> int:
         try:
             # fetch profile info once and filter out business/professional accounts
             count, is_business = _fetch_user_profile(session, user)
-        except Exception:
-            # if we can't determine the profile, skip the user
+        except RateLimitError:
+            # If the API rate limits us, print a clear message and stop the script.
+            print("Error: rate limit hit (received HTTP 429). Stopping.", file=sys.stderr)
+            return 1
+        except Exception as exc:
+            # Catch other exceptions during profile fetch and continue with other users.
+            # Log the exception at debug so it can be inspected when running with --debug.
+            logger.debug("skipping user %s due to error fetching profile: %s", user, exc, exc_info=args.debug)
             continue
         if is_business:
             continue

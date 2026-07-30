@@ -2,7 +2,7 @@
 
 ## Description
 
-a tool to help you be petty and see who does not follow you back on Instagram
+a tool to help you be petty and see who doesn't follow back on Instagram
 
 ## Setup
 
