@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import argparse
 import os
-from typing import Iterable
+from collections.abc import Iterable
+import logging
 
 import requests
 
@@ -141,12 +142,16 @@ def main() -> int:
     session = _build_session(args.sessionid)
     followers, following = get_followers_and_following(args.username, args.sessionid, session=session)
 
+    logger = logging.getLogger(__name__)
+
     for user in find_not_following_back(followers, following):
         try:
             # fetch profile info once and filter out business/professional accounts
             count, is_business = _fetch_user_profile(session, user)
-        except Exception:
-            # if we can't determine the profile, skip the user
+        except (ValueError, requests.RequestException) as exc:
+            # If we can't determine the profile (or there was a network error), skip the user.
+            # Log at debug level so CI/lint rules are satisfied without noisy output by default.
+            logger.debug("skipping user %s due to error fetching profile: %s", user, exc)
             continue
         if is_business:
             continue
