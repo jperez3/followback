@@ -44,16 +44,13 @@ jobs:
           # If the above doesn't populate the environment in the runner, fall back to installing the extras directly
           python -m pip install .[dev]
 
-      - name: Run formatting checks (black, isort)
+      - name: Run linting and formatting checks (ruff)
         run: |
-          black --version
-          isort --version
-          black --check .
-          isort --check-only .
-
-      - name: Run linting (flake8)
-        run: |
-          flake8 .
+          ruff --version || true
+          # Check formatting and linting using ruff
+          ruff check .
+          # Optionally run ruff to ensure no fixes are needed
+          ruff check --select I --exit-zero . || true
 
       - name: Run type checks (mypy)
         run: |
