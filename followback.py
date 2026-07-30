@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 from collections.abc import Iterable
-import logging
 
 import requests
 
